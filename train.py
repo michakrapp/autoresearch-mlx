@@ -402,7 +402,7 @@ WARMDOWN_RATIO = 0.5
 FINAL_LR_FRAC = 0.0
 
 # Model size
-DEPTH = 3
+DEPTH = 2
 DEVICE_BATCH_SIZE = 32
 FINAL_EVAL_BATCH_SIZE = get_safe_eval_batch_size(default=256)
 STARTUP_EXCLUDE_STEPS = 1
