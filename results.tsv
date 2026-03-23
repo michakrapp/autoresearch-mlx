@@ -5,3 +5,4 @@ commit	val_bpb	memory_gb	status	description
 75c0117	1.623020	13.3	keep	remove logit cap
 6d17bf4	1.610201	13.3	keep	double device batch size to 32
 35cfb72	1.569284	13.1	keep	reduce MLP expansion from 4x to 3x
+ac8b753	1.554482	13.1	keep	add 5% warmup phase
