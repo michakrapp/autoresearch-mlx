@@ -9,4 +9,5 @@ ac8b753	1.554482	13.1	keep	add 5% warmup phase
 a80c297	1.553620	13.1	keep	reduce Adam beta1 from 0.8 to 0.7
 8102c65	1.522528	13.1	keep	reduce depth from 4 to 3
 d875801	1.513328	12.6	keep	reduce depth from 3 to 2
-fb93ea3	1.506304	13.1	keep	increase ASPECT_RATIO to 96 with depth 2
+20b7489	1.506304	13.1	keep	increase ASPECT_RATIO to 96 with depth 2
+b78ca31	1.480564	13.1	keep	reduce warmdown from 50% to 30%
