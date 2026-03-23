@@ -1,2 +1,3 @@
 commit	val_bpb	memory_gb	status	description
 5bebd88	1.933017	13.3	keep	baseline
+8614c8d	1.788044	13.3	keep	halve matrix LR to 0.02
