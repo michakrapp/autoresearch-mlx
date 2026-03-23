@@ -403,7 +403,7 @@ FINAL_LR_FRAC = 0.0
 
 # Model size
 DEPTH = 4
-DEVICE_BATCH_SIZE = 16
+DEVICE_BATCH_SIZE = 32
 FINAL_EVAL_BATCH_SIZE = get_safe_eval_batch_size(default=256)
 STARTUP_EXCLUDE_STEPS = 1
 

@@ -2,4 +2,5 @@ commit	val_bpb	memory_gb	status	description
 5bebd88	1.933017	13.3	keep	baseline
 8614c8d	1.788044	13.3	keep	halve matrix LR to 0.02
 9068caa	1.662642	13.3	keep	halve matrix LR to 0.01
-1229ca5	1.623020	13.3	keep	remove logit cap
+75c0117	1.623020	13.3	keep	remove logit cap
+6d17bf4	1.610201	13.3	keep	double device batch size to 32
