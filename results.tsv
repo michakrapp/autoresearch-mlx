@@ -1,6 +1,15 @@
 commit	val_bpb	memory_gb	status	description
-383abb4	2.667000	26.9	keep	baseline (AdamW, default config)
-c67ad2a	2.695369	26.9	discard	lower weight decay to 0.1
-909dd59	2.588904	26.9	keep	halve total batch size to 2^16
-4161af3	2.533728	26.9	keep	increase matrix LR to 0.04
-5efc7aa	1.807902	20.7	keep	reduce depth from 8 to 4
+5bebd88	1.933017	13.3	keep	baseline
+8614c8d	1.788044	13.3	keep	halve matrix LR to 0.02
+9068caa	1.662642	13.3	keep	halve matrix LR to 0.01
+75c0117	1.623020	13.3	keep	remove logit cap
+6d17bf4	1.610201	13.3	keep	double device batch size to 32
+35cfb72	1.569284	13.1	keep	reduce MLP expansion from 4x to 3x
+ac8b753	1.554482	13.1	keep	add 5% warmup phase
+a80c297	1.553620	13.1	keep	reduce Adam beta1 from 0.8 to 0.7
+8102c65	1.522528	13.1	keep	reduce depth from 4 to 3
+d875801	1.513328	12.6	keep	reduce depth from 3 to 2
+20b7489	1.506304	13.1	keep	increase ASPECT_RATIO to 96 with depth 2
+c88c2ff	1.480564	13.1	keep	reduce warmdown from 50% to 30%
+f84886f	1.466788	13.1	keep	increase warmup from 5% to 8%
+de17ca1	1.456599	12.8	keep	increase HEAD_DIM from 128 to 192

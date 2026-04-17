@@ -36,16 +36,16 @@ def norm(x):
 
 def has_ve(layer_idx, n_layer):
     """Returns True if layer should have Value Embedding (alternating, last always included)."""
-    return layer_idx % 2 == (n_layer - 1) % 2
+    return False  # disabled for experiment
 
 
-def create_additive_causal_mask(seq_len, dtype=mx.float32):
+def create_additive_causal_mask(seq_len, dtype=mx.bfloat16):
     indices = mx.arange(seq_len)
     blocked = indices[None, :] > indices[:, None]
     return mx.where(blocked, mx.array(float("-inf"), dtype=dtype), mx.array(0.0, dtype=dtype))
 
 
-def create_sliding_window_mask(seq_len, window_size, dtype=mx.float32):
+def create_sliding_window_mask(seq_len, window_size, dtype=mx.bfloat16):
     indices = mx.arange(seq_len)
     causal = indices[None, :] > indices[:, None]
     too_far = (indices[:, None] - indices[None, :]) >= window_size
@@ -55,6 +55,36 @@ def create_sliding_window_mask(seq_len, window_size, dtype=mx.float32):
 
 def get_peak_memory_mb():
     return mx.get_peak_memory() / 1024 / 1024
+
+
+def get_safe_eval_batch_size(default=256, min_batch=4):
+    """Cap eval batch size based on available Metal memory to prevent OOM.
+
+    On 24GB Macs the default batch_size=256 triggers a Metal allocation error
+    because the eval pass requires a single buffer larger than the maximum
+    allowed (~14GB).  We detect total system RAM and scale down accordingly.
+    """
+    import subprocess
+    min_batch = min(min_batch, default)
+    try:
+        result = subprocess.run(
+            ["sysctl", "-n", "hw.memsize"],
+            capture_output=True, text=True, timeout=5, check=True,
+        )
+        total_ram_gb = int(result.stdout.strip()) / (1024 ** 3)
+    except Exception:
+        total_ram_gb = 16  # conservative fallback
+
+    # Metal's max single-buffer limit is ~75% of system RAM. The eval pass at
+    # batch_size=256 with seq_len=2048 allocates ~16GB in a single buffer,
+    # which exceeds the ~14GB limit on a 24GB Mac (reported in issue #2).
+    # We need ~20GB usable Metal headroom for the full batch_size=256.
+    usable_gb = max(total_ram_gb - 10, 2)
+    safe_batch = int(default * (usable_gb / 20))
+    safe_batch = max(min_batch, min(safe_batch, default))
+    # Round down to nearest power of 2 for alignment
+    safe_batch = 2 ** int(math.log2(safe_batch)) if safe_batch >= 1 else min_batch
+    return safe_batch
 
 
 class CausalSelfAttention(nn.Module):
@@ -105,8 +135,8 @@ class CausalSelfAttention(nn.Module):
 class MLP(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.c_fc = nn.Linear(config.n_embd, 4 * config.n_embd, bias=False)
-        self.c_proj = nn.Linear(4 * config.n_embd, config.n_embd, bias=False)
+        self.c_fc = nn.Linear(config.n_embd, 3 * config.n_embd, bias=False)
+        self.c_proj = nn.Linear(3 * config.n_embd, config.n_embd, bias=False)
 
     def __call__(self, x):
         x = self.c_fc(x)
@@ -200,13 +230,12 @@ class GPT(nn.Module):
         x = norm(x)
         x0 = x
         for i, block in enumerate(self.blocks):
-            x = self.resid_lambdas[i] * x + self.x0_lambdas[i] * x0
+            x = self.resid_lambdas[i].astype(x.dtype) * x + self.x0_lambdas[i].astype(x.dtype) * x0
             ve = self.value_embeds[str(i)](idx) if str(i) in self.value_embeds else None
             x = block(x, ve, masks[i])
         x = norm(x)
 
         logits = self.lm_head(x).astype(mx.float32)
-        logits = 15.0 * mx.tanh(logits / 15.0)
 
         if targets is None:
             return logits
@@ -356,26 +385,26 @@ class AdamW:
 # ---------------------------------------------------------------------------
 
 # Model architecture
-ASPECT_RATIO = 64
-HEAD_DIM = 128
+ASPECT_RATIO = 96
+HEAD_DIM = 192
 WINDOW_PATTERN = "SSSL"
 
 # v0.1: AdamW only. Muon port is future work.
 TOTAL_BATCH_SIZE = 2**16
 EMBEDDING_LR = 0.6
 UNEMBEDDING_LR = 0.004
-MATRIX_LR = 0.04
+MATRIX_LR = 0.01
 SCALAR_LR = 0.5
 WEIGHT_DECAY = 0.2
-ADAM_BETAS = (0.8, 0.95)
-WARMUP_RATIO = 0.0
-WARMDOWN_RATIO = 0.5
+ADAM_BETAS = (0.7, 0.95)
+WARMUP_RATIO = 0.08
+WARMDOWN_RATIO = 0.3
 FINAL_LR_FRAC = 0.0
 
 # Model size
-DEPTH = 4
-DEVICE_BATCH_SIZE = 16
-FINAL_EVAL_BATCH_SIZE = 256
+DEPTH = 2
+DEVICE_BATCH_SIZE = 32
+FINAL_EVAL_BATCH_SIZE = get_safe_eval_batch_size(default=256)
 STARTUP_EXCLUDE_STEPS = 1
 
 
@@ -466,7 +495,7 @@ while True:
     mx.eval(model.parameters(), *optimizer.state)
 
     train_loss_f = float(train_loss.item())
-    if train_loss_f > 100:
+    if not math.isfinite(train_loss_f) or train_loss_f > 100:
         print("FAIL")
         raise SystemExit(1)
 
